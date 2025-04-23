@@ -1,0 +1,15 @@
+Starting database initialization at 2025-04-24_00-18-46
+Creating database if it doesn't exist...
+Applying migrations...
+Applying migration: 001_initial_schema.sql
+Migration 001_initial_schema.sql applied successfully
+Applying migration: 002_seed_data.sql
+Migration 002_seed_data.sql applied successfully
+Applying migration: 003_sample_data.sql
+Migration 003_sample_data.sql applied successfully
+Applying migration: 004_performance_indexes.sql
+Migration 004_performance_indexes.sql applied successfully
+Applying migration: 005_maintenance_procedures.sql
+Migration 005_maintenance_procedures.sql applied successfully
+Database initialization completed at 2025-04-24_00-18-47
+----------------------------------------

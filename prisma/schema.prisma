@@ -1,0 +1,385 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum AccountType {
+  SB
+  BB
+  MB
+}
+
+enum UserStatus {
+  active
+  pending
+  inactive
+}
+
+enum LoanType {
+  flat
+  diminishing
+}
+
+enum LoanStatus {
+  active
+  pending
+  closed
+  defaulted
+}
+
+enum TransactionType {
+  deposit
+  withdrawal
+  loan_disbursement
+  loan_payment
+  interest_payment
+  fee
+}
+
+enum SmsType {
+  reminder
+  onboarding
+  notification
+  statement
+}
+
+enum SmsStatus {
+  sent
+  failed
+  pending
+}
+
+// Models
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(100)
+  email        String?  @unique @db.VarChar(100)
+  phone        String   @unique @db.VarChar(20)
+  passwordHash String?  @map("password_hash") @db.VarChar(100)
+  role         String   @default("client") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  client                Client?
+  createdJournalEntries JournalEntry[]        @relation("CreatedBy")
+  postedJournalEntries  JournalEntry[]        @relation("PostedBy")
+  createdTransactions   Transaction[]
+  createdSmsLogs        SmsLog[]
+  generatedTaxReports   TaxReport[]
+  generatedFinReports   FinancialReport[]
+  auditLogs             AuditLog[]
+
+  @@map("users")
+}
+
+model Client {
+  id                 String      @id @db.Uuid
+  accountType        AccountType @map("account_type")
+  accountNumber      String      @unique @map("account_number") @db.VarChar(20)
+  balance            Decimal     @default(0.00) @db.Decimal(15, 2)
+  status             UserStatus  @default(pending)
+  kycVerified        Boolean     @default(false) @map("kyc_verified")
+  dateCreated        DateTime    @default(now()) @map("date_created") @db.Date
+  lastTransactionDate DateTime?   @map("last_transaction_date") @db.Timestamptz
+
+  // Relations
+  user          User           @relation(fields: [id], references: [id], onDelete: Cascade)
+  loans         Loan[]
+  transactions  Transaction[]
+  smsLogs       SmsLog[]
+
+  @@map("clients")
+}
+
+model LoanType {
+  id                  String   @id @default(uuid()) @db.Uuid
+  name                String   @db.VarChar(100)
+  description         String?
+  interestRate        Decimal  @map("interest_rate") @db.Decimal(5, 2)
+  processingFeePercent Decimal  @default(0.00) @map("processing_fee_percent") @db.Decimal(5, 2)
+  lateFeeAmount       Decimal  @default(0.00) @map("late_fee_amount") @db.Decimal(10, 2)
+  minAmount           Decimal  @map("min_amount") @db.Decimal(15, 2)
+  maxAmount           Decimal  @map("max_amount") @db.Decimal(15, 2)
+  minTenureMonths     Int      @map("min_tenure_months")
+  maxTenureMonths     Int      @map("max_tenure_months")
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  loans Loan[]
+
+  @@map("loan_types")
+}
+
+model Loan {
+  id              String     @id @default(uuid()) @db.Uuid
+  clientId        String     @map("client_id") @db.Uuid
+  loanTypeId      String     @map("loan_type_id") @db.Uuid
+  calculationType LoanType   @map("calculation_type")
+  amount          Decimal    @db.Decimal(15, 2)
+  interestRate    Decimal    @map("interest_rate") @db.Decimal(5, 2)
+  tenureMonths    Int        @map("tenure_months")
+  emiAmount       Decimal    @map("emi_amount") @db.Decimal(15, 2)
+  disburseDate    DateTime   @map("disburse_date") @db.Date
+  endDate         DateTime   @map("end_date") @db.Date
+  processingFee   Decimal    @default(0.00) @map("processing_fee") @db.Decimal(10, 2)
+  totalInterest   Decimal    @map("total_interest") @db.Decimal(15, 2)
+  totalAmount     Decimal    @map("total_amount") @db.Decimal(15, 2)
+  remainingAmount Decimal    @map("remaining_amount") @db.Decimal(15, 2)
+  status          LoanStatus @default(pending)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime   @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  client           Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  loanType         LoanType           @relation(fields: [loanTypeId], references: [id], onDelete: Restrict)
+  loanTransactions LoanTransaction[]
+  emiSchedule      EmiSchedule[]
+  transactions     Transaction[]
+
+  @@map("loans")
+}
+
+model LoanTransaction {
+  id                  String   @id @default(uuid()) @db.Uuid
+  loanId              String   @map("loan_id") @db.Uuid
+  amount              Decimal  @db.Decimal(15, 2)
+  principalAmount     Decimal  @map("principal_amount") @db.Decimal(15, 2)
+  interestAmount      Decimal  @map("interest_amount") @db.Decimal(15, 2)
+  lateFee             Decimal  @default(0.00) @map("late_fee") @db.Decimal(10, 2)
+  paymentDate         DateTime @map("payment_date") @db.Date
+  dueDate             DateTime @map("due_date") @db.Date
+  isLatePayment       Boolean  @default(false) @map("is_late_payment")
+  remainingPrincipal  Decimal  @map("remaining_principal") @db.Decimal(15, 2)
+  transactionReference String?  @map("transaction_reference") @db.VarChar(50)
+  notes               String?
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  loan         Loan          @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  emiSchedules EmiSchedule[]
+
+  @@map("loan_transactions")
+}
+
+model EmiSchedule {
+  id                   String    @id @default(uuid()) @db.Uuid
+  loanId               String    @map("loan_id") @db.Uuid
+  installmentNumber    Int       @map("installment_number")
+  dueDate              DateTime  @map("due_date") @db.Date
+  emiAmount            Decimal   @map("emi_amount") @db.Decimal(15, 2)
+  principalAmount      Decimal   @map("principal_amount") @db.Decimal(15, 2)
+  interestAmount       Decimal   @map("interest_amount") @db.Decimal(15, 2)
+  remainingPrincipal   Decimal   @map("remaining_principal") @db.Decimal(15, 2)
+  isPaid               Boolean   @default(false) @map("is_paid")
+  paymentDate          DateTime? @map("payment_date") @db.Date
+  paymentTransactionId String?   @map("payment_transaction_id") @db.Uuid
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  loan              Loan             @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  paymentTransaction LoanTransaction? @relation(fields: [paymentTransactionId], references: [id])
+
+  @@map("emi_schedule")
+}
+
+model ChartOfAccount {
+  id              String    @id @default(uuid()) @db.Uuid
+  accountCode     String    @unique @map("account_code") @db.VarChar(20)
+  accountName     String    @map("account_name") @db.VarChar(100)
+  accountType     String    @map("account_type") @db.VarChar(50)
+  parentAccountId String?   @map("parent_account_id") @db.Uuid
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  parentAccount      ChartOfAccount?       @relation("AccountHierarchy", fields: [parentAccountId], references: [id])
+  childAccounts      ChartOfAccount[]      @relation("AccountHierarchy")
+  journalEntryDetails JournalEntryDetail[]
+
+  @@map("chart_of_accounts")
+}
+
+model JournalEntry {
+  id              String    @id @default(uuid()) @db.Uuid
+  entryDate       DateTime  @map("entry_date") @db.Date
+  referenceNumber String    @map("reference_number") @db.VarChar(50)
+  description     String
+  isPosted        Boolean   @default(false) @map("is_posted")
+  postedById      String?   @map("posted_by") @db.Uuid
+  postedAt        DateTime? @map("posted_at") @db.Timestamptz
+  createdById     String    @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  postedBy           User?                @relation("PostedBy", fields: [postedById], references: [id])
+  createdBy          User                 @relation("CreatedBy", fields: [createdById], references: [id])
+  journalEntryDetails JournalEntryDetail[]
+  transactions       Transaction[]
+
+  @@map("journal_entries")
+}
+
+model JournalEntryDetail {
+  id              String   @id @default(uuid()) @db.Uuid
+  journalEntryId  String   @map("journal_entry_id") @db.Uuid
+  accountId       String   @map("account_id") @db.Uuid
+  debitAmount     Decimal  @default(0.00) @map("debit_amount") @db.Decimal(15, 2)
+  creditAmount    Decimal  @default(0.00) @map("credit_amount") @db.Decimal(15, 2)
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  journalEntry JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      ChartOfAccount @relation(fields: [accountId], references: [id])
+
+  @@map("journal_entry_details")
+}
+
+model Transaction {
+  id               String          @id @default(uuid()) @db.Uuid
+  clientId         String          @map("client_id") @db.Uuid
+  transactionType  TransactionType @map("transaction_type")
+  amount           Decimal         @db.Decimal(15, 2)
+  transactionDate  DateTime        @default(now()) @map("transaction_date") @db.Timestamptz
+  referenceNumber  String?         @map("reference_number") @db.VarChar(50)
+  description      String?
+  relatedLoanId    String?         @map("related_loan_id") @db.Uuid
+  journalEntryId   String?         @map("journal_entry_id") @db.Uuid
+  createdById      String          @map("created_by") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  relatedLoan  Loan?        @relation(fields: [relatedLoanId], references: [id])
+  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@map("transactions")
+}
+
+model SmsTemplate {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(100)
+  templateText String    @map("template_text")
+  templateType SmsType   @map("template_type")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastUsedAt   DateTime? @map("last_used_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  smsLogs SmsLog[]
+
+  @@map("sms_templates")
+}
+
+model SmsLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  clientId      String?   @map("client_id") @db.Uuid
+  phoneNumber   String    @map("phone_number") @db.VarChar(20)
+  message       String
+  templateId    String?   @map("template_id") @db.Uuid
+  status        SmsStatus @default(pending)
+  sentAt        DateTime? @map("sent_at") @db.Timestamptz
+  errorMessage  String?   @map("error_message")
+  createdById   String    @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  client    Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  template  SmsTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  createdBy User         @relation(fields: [createdById], references: [id])
+
+  @@map("sms_logs")
+}
+
+model TaxRate {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String    @db.VarChar(100)
+  rate          Decimal   @db.Decimal(5, 2)
+  description   String?
+  isActive      Boolean   @default(true) @map("is_active")
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("tax_rates")
+}
+
+model TaxReport {
+  id                String   @id @default(uuid()) @db.Uuid
+  reportType        String   @map("report_type") @db.VarChar(50)
+  startDate         DateTime @map("start_date") @db.Date
+  endDate           DateTime @map("end_date") @db.Date
+  totalTaxableAmount Decimal  @map("total_taxable_amount") @db.Decimal(15, 2)
+  totalTaxAmount    Decimal  @map("total_tax_amount") @db.Decimal(15, 2)
+  reportData        Json     @map("report_data") @db.JsonB
+  generatedById     String   @map("generated_by") @db.Uuid
+  generatedAt       DateTime @default(now()) @map("generated_at") @db.Timestamptz
+  notes             String?
+
+  // Relations
+  generatedBy User @relation(fields: [generatedById], references: [id])
+
+  @@map("tax_reports")
+}
+
+model FinancialReport {
+  id            String   @id @default(uuid()) @db.Uuid
+  reportType    String   @map("report_type") @db.VarChar(50)
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime @map("end_date") @db.Date
+  reportData    Json     @map("report_data") @db.JsonB
+  generatedById String   @map("generated_by") @db.Uuid
+  generatedAt   DateTime @default(now()) @map("generated_at") @db.Timestamptz
+  notes         String?
+
+  // Relations
+  generatedBy User @relation(fields: [generatedById], references: [id])
+
+  @@map("financial_reports")
+}
+
+model AuditLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String?   @map("user_id") @db.Uuid
+  action     String    @db.VarChar(50)
+  tableName  String    @map("table_name") @db.VarChar(50)
+  recordId   String?   @map("record_id") @db.Uuid
+  oldValues  Json?     @map("old_values") @db.JsonB
+  newValues  Json?     @map("new_values") @db.JsonB
+  ipAddress  String?   @map("ip_address") @db.VarChar(45)
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  settingKey  String   @unique @map("setting_key") @db.VarChar(100)
+  settingValue String   @map("setting_value")
+  description String?
+  isEditable  Boolean  @default(true) @map("is_editable")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("system_settings")
+}
