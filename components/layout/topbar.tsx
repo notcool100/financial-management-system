@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, Search, Settings, HelpCircle } from "lucide-react"
+import { Bell, Search, Settings, HelpCircle, LogOut, User, Shield } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useUser } from "@/contexts/user-context"
+import { getRoleName } from "@/lib/rbac"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 
 export function Topbar() {
+  const { user, logout } = useUser()
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -126,13 +129,29 @@ export function Topbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Settings</DropdownMenuLabel>
+            <DropdownMenuLabel>
+              <div className="flex flex-col">
+                <span>{user?.name || 'User'}</span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  {user?.role ? getRoleName(user.role) : 'Guest'}
+                </span>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>System Settings</DropdownMenuItem>
-            <DropdownMenuItem>Backup & Restore</DropdownMenuItem>
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              System Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <ThemeToggle />

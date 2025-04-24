@@ -21,7 +21,7 @@ const login = async (req, res, next) => {
     }
 
     // Check password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       throw new ApiError('Invalid credentials', 401);
@@ -132,7 +132,7 @@ const changePassword = async (req, res, next) => {
     }
 
     // Verify current password
-    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
 
     if (!isMatch) {
       throw new ApiError('Current password is incorrect', 400);
@@ -144,7 +144,7 @@ const changePassword = async (req, res, next) => {
 
     // Update password
     await db.none(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
       [hashedPassword, userId]
     );
 

@@ -4,9 +4,12 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useUser } from "@/contexts/user-context"
+import { Permission } from "@/lib/rbac"
 import {
   BarChart3,
   Users,
+  UserCog,
   Percent,
   CreditCard,
   Calculator,
@@ -26,46 +29,61 @@ const navItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: BarChart3,
+    permission: "dashboard:view" as Permission,
   },
   {
-    title: "User Management",
+    title: "Client Management",
     href: "/users",
     icon: Users,
+    permission: "clients:view" as Permission,
+  },
+  {
+    title: "Staff Management",
+    href: "/staff",
+    icon: UserCog,
+    permission: "staff:view" as Permission,
   },
   {
     title: "Interest Management",
     href: "/interest",
     icon: Percent,
+    permission: "interest:view" as Permission,
   },
   {
     title: "Loan Management",
     href: "/loans",
     icon: CreditCard,
+    permission: "loans:view" as Permission,
   },
   {
     title: "EMI Calculator",
     href: "/calculator",
     icon: Calculator,
+    permission: "loans:view" as Permission,
   },
   {
     title: "SMS Banking",
     href: "/sms",
     icon: MessageSquare,
+    permission: "clients:view" as Permission,
   },
   {
     title: "Journal Entry",
     href: "/journal",
     icon: BookOpen,
+    permission: "transactions:view" as Permission,
   },
   {
     title: "Financial Reports",
     href: "/reports",
     icon: FileText,
+    permission: "reports:view" as Permission,
   },
   {
     title: "Print Preview",
     href: "/print",
     icon: Printer,
+    permission: "reports:view" as Permission,
   },
 ]
 
@@ -73,6 +91,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { user, hasPermission } = useUser()
 
   return (
     <>
@@ -114,24 +133,27 @@ export function Sidebar() {
           <nav className="grid gap-1 px-2">
             <TooltipProvider delayDuration={0}>
               {navItems.map((item) => (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                        pathname === item.href ? "bg-accent text-accent-foreground" : "transparent",
-                        collapsed && "md:justify-center md:px-2",
-                      )}
-                    >
-                      <item.icon className={cn("mr-2 h-5 w-5", collapsed && "md:mr-0")} />
-                      <span className={cn(collapsed && "md:hidden")}>{item.title}</span>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className={cn("md:hidden", !collapsed && "hidden")}>
-                    {item.title}
-                  </TooltipContent>
-                </Tooltip>
+                // Only show menu items the user has permission to access
+                hasPermission(item.permission) && (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                          pathname === item.href ? "bg-accent text-accent-foreground" : "transparent",
+                          collapsed && "md:justify-center md:px-2",
+                        )}
+                      >
+                        <item.icon className={cn("mr-2 h-5 w-5", collapsed && "md:mr-0")} />
+                        <span className={cn(collapsed && "md:hidden")}>{item.title}</span>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className={cn("md:hidden", !collapsed && "hidden")}>
+                      {item.title}
+                    </TooltipContent>
+                  </Tooltip>
+                )
               ))}
             </TooltipProvider>
           </nav>
@@ -140,8 +162,8 @@ export function Sidebar() {
           <div className={cn("flex items-center gap-2", collapsed && "md:justify-center")}>
             <div className="h-8 w-8 rounded-full bg-muted" />
             <div className={cn("space-y-1", collapsed && "md:hidden")}>
-              <p className="text-sm font-medium leading-none">Admin User</p>
-              <p className="text-xs leading-none text-muted-foreground">admin@example.com</p>
+              <p className="text-sm font-medium leading-none">{user?.name || 'User'}</p>
+              <p className="text-xs leading-none text-muted-foreground">{user?.email || 'user@example.com'}</p>
             </div>
           </div>
         </div>

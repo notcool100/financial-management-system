@@ -1,18 +1,16 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const { 
-  getUsers, 
-  getUserById, 
-  createUser, 
-  updateUser, 
-  deleteUser,
-  getRecentUsers
-} = require('../controllers/user.controller');
+  getInterestRates, 
+  getInterestRateById, 
+  createInterestRate, 
+  updateInterestRate, 
+  deleteInterestRate 
+} = require('../controllers/interest.controller');
 const { 
   authenticate, 
   isAdmin, 
-  isStaff, 
-  isOwnerOrAdmin 
+  isStaff 
 } = require('../middleware/auth.middleware');
 const { validate, validateUUID } = require('../middleware/validator.middleware');
 
@@ -20,43 +18,10 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/users/recent:
+ * /api/interest/rates:
  *   get:
- *     summary: Get recent users
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 5
- *     responses:
- *       200:
- *         description: List of recent users
- *       401:
- *         description: Not authenticated
- *       403:
- *         description: Not authorized
- */
-router.get(
-  '/recent',
-  authenticate,
-  isStaff,
-  [
-    query('limit').optional().isInt({ min: 1, max: 20 }).withMessage('Limit must be between 1 and 20'),
-    validate
-  ],
-  getRecentUsers
-);
-
-/**
- * @swagger
- * /api/users:
- *   get:
- *     summary: Get all users
- *     tags: [Users]
+ *     summary: Get all interest rates
+ *     tags: [Interest]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -71,41 +36,45 @@ router.get(
  *           type: integer
  *           default: 10
  *       - in: query
- *         name: search
+ *         name: sort_by
  *         schema:
  *           type: string
+ *           enum: [name, rate, created_at, updated_at]
+ *           default: created_at
  *       - in: query
- *         name: role
+ *         name: sort_order
  *         schema:
  *           type: string
- *           enum: [admin, staff, client]
+ *           enum: [asc, desc]
+ *           default: desc
  *     responses:
  *       200:
- *         description: List of users
+ *         description: List of interest rates
  *       401:
  *         description: Not authenticated
  *       403:
  *         description: Not authorized
  */
 router.get(
-  '/',
+  '/rates',
   authenticate,
   isStaff,
   [
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-    query('role').optional().isIn(['admin', 'staff', 'client']).withMessage('Invalid role'),
+    query('sort_by').optional().isIn(['name', 'rate', 'created_at', 'updated_at']).withMessage('Invalid sort field'),
+    query('sort_order').optional().isIn(['asc', 'desc']).withMessage('Invalid sort order'),
     validate
   ],
-  getUsers
+  getInterestRates
 );
 
 /**
  * @swagger
- * /api/users/{id}:
+ * /api/interest/rates/{id}:
  *   get:
- *     summary: Get user by ID
- *     tags: [Users]
+ *     summary: Get interest rate by ID
+ *     tags: [Interest]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -117,28 +86,28 @@ router.get(
  *           format: uuid
  *     responses:
  *       200:
- *         description: User details
+ *         description: Interest rate details
  *       404:
- *         description: User not found
+ *         description: Interest rate not found
  *       401:
  *         description: Not authenticated
  *       403:
  *         description: Not authorized
  */
 router.get(
-  '/:id',
+  '/rates/:id',
   authenticate,
+  isStaff,
   validateUUID,
-  isOwnerOrAdmin,
-  getUserById
+  getInterestRateById
 );
 
 /**
  * @swagger
- * /api/users:
+ * /api/interest/rates:
  *   post:
- *     summary: Create new user
- *     tags: [Users]
+ *     summary: Create new interest rate
+ *     tags: [Interest]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -149,27 +118,24 @@ router.get(
  *             type: object
  *             required:
  *               - name
- *               - email
- *               - phone
- *               - password
- *               - role
+ *               - rate
  *             properties:
  *               name:
  *                 type: string
- *               email:
+ *                 minLength: 2
+ *                 maxLength: 50
+ *               rate:
+ *                 type: number
+ *                 minimum: 0
+ *               description:
  *                 type: string
- *                 format: email
- *               phone:
- *                 type: string
- *               password:
- *                 type: string
- *                 minLength: 6
- *               role:
- *                 type: string
- *                 enum: [admin, staff, client]
+ *                 maxLength: 255
+ *               is_active:
+ *                 type: boolean
+ *                 default: true
  *     responses:
  *       201:
- *         description: User created successfully
+ *         description: Interest rate created successfully
  *       400:
  *         description: Validation error
  *       401:
@@ -177,28 +143,26 @@ router.get(
  *       403:
  *         description: Not authorized
  */
-// Temporarily disable authentication for testing
 router.post(
-  '/',
-  // authenticate,  // Commented out for testing
-  // isAdmin,       // Commented out for testing
+  '/rates',
+  authenticate,
+  isAdmin,
   [
-    body('name').notEmpty().withMessage('Name is required'),
-    body('email').isEmail().withMessage('Please provide a valid email'),
-    body('phone').notEmpty().withMessage('Phone number is required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('role').isIn(['admin', 'staff', 'client']).withMessage('Invalid role'),
+    body('name').isString().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters'),
+    body('rate').isFloat({ min: 0 }).withMessage('Rate must be a non-negative number'),
+    body('description').optional().isString().isLength({ max: 255 }).withMessage('Description must be at most 255 characters'),
+    body('is_active').optional().isBoolean().withMessage('is_active must be a boolean'),
     validate
   ],
-  createUser
+  createInterestRate
 );
 
 /**
  * @swagger
- * /api/users/{id}:
- *   put:
- *     summary: Update user
- *     tags: [Users]
+ * /api/interest/rates/{id}:
+ *   patch:
+ *     summary: Update interest rate
+ *     tags: [Interest]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -217,45 +181,49 @@ router.post(
  *             properties:
  *               name:
  *                 type: string
- *               email:
+ *                 minLength: 2
+ *                 maxLength: 50
+ *               rate:
+ *                 type: number
+ *                 minimum: 0
+ *               description:
  *                 type: string
- *                 format: email
- *               phone:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [admin, staff, client]
+ *                 maxLength: 255
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       200:
- *         description: User updated successfully
+ *         description: Interest rate updated successfully
  *       400:
  *         description: Validation error
  *       404:
- *         description: User not found
+ *         description: Interest rate not found
  *       401:
  *         description: Not authenticated
  *       403:
  *         description: Not authorized
  */
-router.put(
-  '/:id',
+router.patch(
+  '/rates/:id',
   authenticate,
+  isAdmin,
   validateUUID,
-  isOwnerOrAdmin,
   [
-    body('email').optional().isEmail().withMessage('Please provide a valid email'),
-    body('role').optional().isIn(['admin', 'staff', 'client']).withMessage('Invalid role'),
+    body('name').optional().isString().isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters'),
+    body('rate').optional().isFloat({ min: 0 }).withMessage('Rate must be a non-negative number'),
+    body('description').optional().isString().isLength({ max: 255 }).withMessage('Description must be at most 255 characters'),
+    body('is_active').optional().isBoolean().withMessage('is_active must be a boolean'),
     validate
   ],
-  updateUser
+  updateInterestRate
 );
 
 /**
  * @swagger
- * /api/users/{id}:
+ * /api/interest/rates/{id}:
  *   delete:
- *     summary: Delete user
- *     tags: [Users]
+ *     summary: Delete interest rate
+ *     tags: [Interest]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -267,22 +235,22 @@ router.put(
  *           format: uuid
  *     responses:
  *       200:
- *         description: User deleted successfully
+ *         description: Interest rate deleted successfully
  *       400:
- *         description: Cannot delete user with active loans
+ *         description: Cannot delete interest rate that is in use
  *       404:
- *         description: User not found
+ *         description: Interest rate not found
  *       401:
  *         description: Not authenticated
  *       403:
  *         description: Not authorized
  */
 router.delete(
-  '/:id',
+  '/rates/:id',
   authenticate,
-  validateUUID,
   isAdmin,
-  deleteUser
+  validateUUID,
+  deleteInterestRate
 );
 
 module.exports = router;

@@ -34,10 +34,9 @@ interface User {
   name: string
   email: string
   phone: string
-  account_type: string
-  balance: number
-  status: "active" | "pending" | "inactive"
+  role: string
   created_at: string
+  updated_at: string
 }
 
 interface UserManagementTableProps {
@@ -194,6 +193,7 @@ export function UserManagementTable({
         url += `&status=${statusFilter}`
       }
       
+      // Use the Next.js API route to proxy the request to the backend
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -237,9 +237,9 @@ export function UserManagementTable({
       }
       
       const data = await response.json()
-      setUsers(data.users)
-      setTotalUsers(data.total)
-      setTotalPages(data.totalPages)
+      setUsers(data.data.users)
+      setTotalUsers(data.data.pagination.total)
+      setTotalPages(data.data.pagination.totalPages)
     } catch (err: any) {
       console.error('Error fetching users:', err)
       
@@ -299,6 +299,7 @@ export function UserManagementTable({
     setIsSubmitting(true)
     
     try {
+      // Use the Next.js API route to proxy the request to the backend
       const response = await fetch(`/api/users/${userToDelete}`, {
         method: 'DELETE',
         headers: {
@@ -348,6 +349,7 @@ export function UserManagementTable({
     setIsSubmitting(true)
     
     try {
+      // Use the Next.js API route to proxy the request to the backend
       const response = await fetch(`/api/users/${userToEdit.id}`, {
         method: 'PATCH',
         headers: {
@@ -358,8 +360,7 @@ export function UserManagementTable({
           name: userToEdit.name,
           email: userToEdit.email,
           phone: userToEdit.phone,
-          account_type: userToEdit.account_type,
-          status: userToEdit.status
+          role: userToEdit.role
         })
       })
       
@@ -492,7 +493,7 @@ export function UserManagementTable({
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-slate-700 dark:text-slate-300 font-medium">
-                      {formatNepaliCurrency(user.balance)}
+                      {formatNepaliCurrency(user.balance || 0)}
                     </td>
                     <td className="py-3 px-4">
                       <Badge

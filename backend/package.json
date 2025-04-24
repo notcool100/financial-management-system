@@ -7,7 +7,10 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "jest --forceExit",
-    "lint": "eslint src/**/*.js"
+    "lint": "eslint src/**/*.js",
+    "create-db": "node src/scripts/create-database.js",
+    "init-schema": "node src/scripts/init-schema.js",
+    "setup": "npm run create-db && npm run init-schema"
   },
   "keywords": [
     "finance",

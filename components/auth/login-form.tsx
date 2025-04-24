@@ -11,8 +11,8 @@ import * as z from "zod"
 import { Loader2 } from "lucide-react"
 
 const formSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
+  email: z.string().email({
+    message: "Please enter a valid email address.",
   }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
@@ -26,20 +26,68 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
+  const [error, setError] = useState<string | null>(null);
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log(values)
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      console.log('Attempting login with:', values)
+      
+      // Call the login API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
+
+      console.log('Login response status:', response.status)
+      
+      // Get response as text first for debugging
+      const responseText = await response.text()
+      console.log('Raw response:', responseText)
+      
+      // Parse the response
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (e) {
+        console.error('Error parsing response:', e)
+        throw new Error(`Invalid JSON response: ${responseText}`)
+      }
+      
+      console.log('Parsed response:', data)
+
+      if (response.ok && data.success) {
+        console.log('Login successful, storing tokens and redirecting')
+        
+        // Store the token in localStorage
+        localStorage.setItem('token', data.data.tokens.accessToken)
+        
+        // Store user info if needed
+        localStorage.setItem('user', JSON.stringify(data.data.user))
+        
+        // Redirect to dashboard
+        router.push("/dashboard")
+      } else {
+        console.error('Login failed:', data)
+        // Show error message
+        setError(data.message || 'Login failed. Please check your credentials.')
+      }
+    } catch (err: any) {
+      console.error('Login error:', err)
+      setError('An error occurred during login. Please try again.')
+    } finally {
       setIsLoading(false)
-      router.push("/dashboard")
-    }, 1000)
+    }
   }
 
   return (
@@ -48,12 +96,12 @@ export function LoginForm() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
-            name="username"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Username</FormLabel>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="admin" {...field} />
+                  <Input type="email" placeholder="admin@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -72,6 +120,11 @@ export function LoginForm() {
               </FormItem>
             )}
           />
+          {error && (
+            <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
+              {error}
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>

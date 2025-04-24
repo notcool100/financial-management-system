@@ -44,19 +44,19 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">User Management</h1>
-          <p className="text-muted-foreground">Manage all users and clients in the system</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Client Management</h1>
+          <p className="text-muted-foreground">Manage all clients and their accounts in the system</p>
         </div>
         <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setAddUserOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Add New User
+          Add New Client
         </Button>
       </div>
 
       <Tabs defaultValue="all" className="space-y-4" onValueChange={handleTabChange}>
         <div className="flex justify-between items-center">
           <TabsList>
-            <TabsTrigger value="all">All Users</TabsTrigger>
+            <TabsTrigger value="all">All Clients</TabsTrigger>
             <TabsTrigger value="sb">Sadaran Bachat</TabsTrigger>
             <TabsTrigger value="bb">Baal Bachat</TabsTrigger>
             <TabsTrigger value="mb">Masik Bachat</TabsTrigger>
@@ -66,7 +66,7 @@ export default function UsersPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
-                placeholder="Search users..." 
+                placeholder="Search clients..." 
                 className="pl-10 w-[250px]" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

@@ -1,11 +1,18 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
+const { 
+  getJournalEntries,
+  getJournalEntryById,
+  createJournalEntry,
+  postJournalEntry,
+  getChartOfAccounts,
+  getAccountById,
+  createAccount
+} = require('../controllers/journal.controller');
 const { authenticate, isStaff, isAdmin } = require('../middleware/auth.middleware');
 const { validate, validateUUID } = require('../middleware/validator.middleware');
 
 const router = express.Router();
-
-// Note: Journal controller is not implemented yet, but routes are defined for completeness
 
 /**
  * @swagger
@@ -58,10 +65,7 @@ router.get(
     query('is_posted').optional().isBoolean().withMessage('is_posted must be a boolean'),
     validate
   ],
-  (req, res) => {
-    // Placeholder for getJournalEntries controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getJournalEntries
 );
 
 /**
@@ -94,10 +98,7 @@ router.get(
   authenticate,
   validateUUID,
   isStaff,
-  (req, res) => {
-    // Placeholder for getJournalEntryById controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getJournalEntryById
 );
 
 /**
@@ -185,10 +186,7 @@ router.post(
     }),
     validate
   ],
-  (req, res) => {
-    // Placeholder for createJournalEntry controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  createJournalEntry
 );
 
 /**
@@ -223,10 +221,7 @@ router.patch(
   authenticate,
   validateUUID,
   isAdmin,
-  (req, res) => {
-    // Placeholder for postJournalEntry controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  postJournalEntry
 );
 
 /**
@@ -263,10 +258,7 @@ router.get(
     query('is_active').optional().isBoolean().withMessage('is_active must be a boolean'),
     validate
   ],
-  (req, res) => {
-    // Placeholder for getChartOfAccounts controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getChartOfAccounts
 );
 
 /**
@@ -299,10 +291,7 @@ router.get(
   authenticate,
   validateUUID,
   isStaff,
-  (req, res) => {
-    // Placeholder for getAccountById controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getAccountById
 );
 
 /**
@@ -357,10 +346,7 @@ router.post(
     body('parent_account_id').optional().isUUID().withMessage('Invalid parent account ID'),
     validate
   ],
-  (req, res) => {
-    // Placeholder for createAccount controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  createAccount
 );
 
 module.exports = router;

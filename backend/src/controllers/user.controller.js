@@ -143,7 +143,7 @@ const createUser = async (req, res, next) => {
     
     // Create user
     const newUser = await db.one(`
-      INSERT INTO users (name, email, phone, password_hash, role, created_at, updated_at)
+      INSERT INTO users (name, email, phone, password, role, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       RETURNING id, name, email, phone, role, created_at, updated_at
     `, [name, email, phone, hashedPassword, role]);
@@ -277,10 +277,37 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+/**
+ * Get recent users
+ * @route GET /api/users/recent
+ * @access Private (Admin/Staff)
+ */
+const getRecentUsers = async (req, res, next) => {
+  try {
+    const { limit = 5 } = req.query;
+    
+    const users = await db.any(`
+      SELECT id, name, email, phone, role, created_at
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT $1
+    `, [limit]);
+    
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    logger.error('Error getting recent users:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
+  getRecentUsers,
 };

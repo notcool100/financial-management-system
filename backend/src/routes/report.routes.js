@@ -1,11 +1,17 @@
 const express = require('express');
-const { query } = require('express-validator');
+const { query, body } = require('express-validator');
+const { 
+  getBalanceSheet,
+  getIncomeStatement,
+  getTrialBalance,
+  getLoanPortfolio,
+  getDayBook,
+  saveReport
+} = require('../controllers/report.controller');
 const { authenticate, isStaff, isAdmin } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validator.middleware');
 
 const router = express.Router();
-
-// Note: Report controller is not implemented yet, but routes are defined for completeness
 
 /**
  * @swagger
@@ -47,10 +53,7 @@ router.get(
     query('format').optional().isIn(['json', 'pdf', 'csv']).withMessage('Invalid format'),
     validate
   ],
-  (req, res) => {
-    // Placeholder for getBalanceSheet controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getBalanceSheet
 );
 
 /**
@@ -100,10 +103,7 @@ router.get(
     query('format').optional().isIn(['json', 'pdf', 'csv']).withMessage('Invalid format'),
     validate
   ],
-  (req, res) => {
-    // Placeholder for getIncomeStatement controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getIncomeStatement
 );
 
 /**
@@ -146,10 +146,7 @@ router.get(
     query('format').optional().isIn(['json', 'pdf', 'csv']).withMessage('Invalid format'),
     validate
   ],
-  (req, res) => {
-    // Placeholder for getTrialBalance controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getTrialBalance
 );
 
 /**
@@ -199,10 +196,7 @@ router.get(
     query('format').optional().isIn(['json', 'pdf', 'csv']).withMessage('Invalid format'),
     validate
   ],
-  (req, res) => {
-    // Placeholder for getLoanPortfolio controller
-    res.status(501).json({ message: 'Not implemented yet' });
-  }
+  getLoanPortfolio
 );
 
 /**

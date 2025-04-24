@@ -9,7 +9,8 @@ const errorHandler = (err, req, res, next) => {
     stack: err.stack,
     path: req.path,
     method: req.method,
-    ip: req.ip
+    ip: req.ip,
+    body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
   });
 
   // Set default status code and message
@@ -33,14 +34,27 @@ const errorHandler = (err, req, res, next) => {
     // PostgreSQL unique violation error
     statusCode = 409;
     message = 'Duplicate entry found';
+  } else if (err.type === 'entity.parse.failed') {
+    // JSON parse error
+    statusCode = 400;
+    message = 'Invalid JSON in request body';
   }
 
-  // Send error response
-  res.status(statusCode).json({
+  // Make sure we're setting the correct content type
+  res.setHeader('Content-Type', 'application/json');
+  
+  // Create the error response object
+  const errorResponse = {
     success: false,
     message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+  };
+  
+  // Log the error response we're sending
+  logger.debug('Sending error response:', errorResponse);
+  
+  // Send error response
+  res.status(statusCode).json(errorResponse);
 };
 
 /**

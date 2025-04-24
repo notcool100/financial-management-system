@@ -323,7 +323,7 @@ export function InterestRatesTable({ accountType, addRateOpen = false, setAddRat
                     </td>
                     <td className="py-3 px-4 font-medium text-emerald-600 dark:text-emerald-400">{rate.interest_rate}%</td>
                     <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
-                      {formatNepaliCurrency(rate.min_balance)}
+                      {formatNepaliCurrency(rate.min_balance || 0)}
                     </td>
                     <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
                       {rate.max_balance ? formatNepaliCurrency(rate.max_balance) : "No Limit"}

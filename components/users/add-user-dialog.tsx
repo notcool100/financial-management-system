@@ -41,9 +41,8 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     name: "",
     email: "",
     phone: "",
-    account_type: "SB",
-    initial_balance: 0,
-    status: "active",
+    password: "",
+    role: "client",
   })
   const [avatarPreview, setAvatarPreview] = useState("")
 
@@ -61,6 +60,9 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     setError(null)
 
     try {
+      console.log('Sending user data:', JSON.stringify(newUser))
+      
+      // Use the Next.js API route to proxy the request to the backend
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
@@ -70,23 +72,64 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         body: JSON.stringify(newUser)
       })
       
+      console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries([...response.headers.entries()]))
+      
+      // Get the raw text first to see what's being returned
+      const responseText = await response.text()
+      console.log('Raw response:', responseText)
+      
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to create user')
+        try {
+          // Try to parse the error as JSON
+          const errorData = JSON.parse(responseText)
+          throw new Error(errorData.message || 'Failed to create user')
+        } catch (parseError) {
+          // If it's not valid JSON, use the raw text
+          throw new Error(responseText || 'Failed to create user')
+        }
       }
       
-      const data = await response.json()
-      onUserAdded(data.user)
-      onOpenChange(false)
+      // Parse the response text as JSON
+      let data
+      try {
+        data = JSON.parse(responseText)
+        console.log('Parsed response data:', data)
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError)
+        throw new Error('Invalid response format from server')
+      }
+      
+      // Check if the response has the expected structure
+      if (data && data.success && data.data) {
+        console.log('User created successfully:', data.data);
+        onUserAdded(data.data)
+        onOpenChange(false)
+      } else if (data && data.success) {
+        // Some APIs might return success without a data property
+        console.log('User created successfully, but no data returned:', data);
+        // Create a mock user object with the data we sent
+        const mockUser = {
+          ...newUser,
+          id: Date.now().toString(), // Generate a temporary ID
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        delete mockUser.password; // Remove password from the mock user
+        onUserAdded(mockUser);
+        onOpenChange(false);
+      } else {
+        console.error('Unexpected response structure:', data)
+        throw new Error(data.message || 'Unexpected response from server')
+      }
 
       // Reset form
       setNewUser({
         name: "",
         email: "",
         phone: "",
-        account_type: "SB",
-        initial_balance: 0,
-        status: "active",
+        password: "",
+        role: "client",
       })
       setAvatarPreview("")
     } catch (err: any) {
@@ -158,43 +201,26 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="account_type">Account Type</Label>
-              <Select value={newUser.account_type} onValueChange={(value) => handleInputChange("account_type", value)}>
-                <SelectTrigger id="account_type">
-                  <SelectValue placeholder="Select account type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SB">Sadaran Bachat</SelectItem>
-                  <SelectItem value="BB">Baal Bachat</SelectItem>
-                  <SelectItem value="MB">Masik Bachat</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="initial_balance">Initial Balance</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
-                id="initial_balance"
-                type="number"
-                placeholder="0"
-                value={newUser.initial_balance}
-                onChange={(e) => handleInputChange("initial_balance", Number(e.target.value))}
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                value={newUser.password}
+                onChange={(e) => handleInputChange("password", e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={newUser.status} 
-                onValueChange={(value: "active" | "pending" | "inactive") => 
-                  handleInputChange("status", value)
-                }
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
+              <Label htmlFor="role">Role</Label>
+              <Select value={newUser.role} onValueChange={(value) => handleInputChange("role", value)}>
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="client">Client</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -207,7 +233,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={isSubmitting || !newUser.name || !newUser.email || !newUser.phone} 
+            disabled={isSubmitting || !newUser.name || !newUser.email || !newUser.phone || !newUser.password} 
             className="bg-emerald-600 hover:bg-emerald-700"
           >
             {isSubmitting ? (

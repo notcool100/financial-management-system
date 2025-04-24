@@ -18,6 +18,8 @@ const journalRoutes = require('./routes/journal.routes');
 const reportRoutes = require('./routes/report.routes');
 const smsRoutes = require('./routes/sms.routes');
 const taxRoutes = require('./routes/tax.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
+const interestRoutes = require('./routes/interest.routes');
 
 // Import middleware
 const { errorHandler } = require('./middleware/error.middleware');
@@ -39,7 +41,13 @@ const limiter = rateLimit({
 
 // Apply middleware
 app.use(helmet()); // Security headers
-app.use(cors()); // Enable CORS
+// Configure CORS with specific options
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*', // Allow requests from any origin in development
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(morgan('combined')); // HTTP request logger
@@ -59,10 +67,60 @@ app.use('/api/journal', journalRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/tax', taxRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/interest', interestRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', timestamp: new Date() });
+});
+
+// Test endpoint for debugging
+app.get('/api/test', (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: 'API is working correctly',
+    timestamp: new Date(),
+    headers: req.headers,
+    environment: process.env.NODE_ENV,
+    database: {
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      name: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      // Don't include the actual password
+      passwordConfigured: !!process.env.DB_PASSWORD
+    }
+  });
+});
+
+// Test endpoint to check admin user
+app.get('/api/test/admin', async (req, res) => {
+  try {
+    const { db } = require('./config/db.config');
+    const user = await db.oneOrNone('SELECT id, name, email, role FROM users WHERE email = $1', ['admin@example.com']);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Admin user check',
+      adminExists: !!user,
+      user: user || null
+    });
+  } catch (error) {
+    console.error('Error checking admin user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking admin user',
+      error: error.message
+    });
+  }
+});
+
+// 404 handler for undefined routes
+app.use((req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  error.statusCode = 404;
+  next(error);
 });
 
 // Error handling middleware
