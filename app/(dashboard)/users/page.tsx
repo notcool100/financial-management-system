@@ -6,10 +6,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserManagementTable } from "@/components/users/user-management-table"
 import { Plus, Search } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function UsersPage() {
   const [addUserOpen, setAddUserOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [accountTypeFilter, setAccountTypeFilter] = useState("all")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+
+  // Debounce search query to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const handleTabChange = (value: string) => {
+    switch (value) {
+      case "sb":
+        setAccountTypeFilter("SB")
+        break
+      case "bb":
+        setAccountTypeFilter("BB")
+        break
+      case "mb":
+        setAccountTypeFilter("MB")
+        break
+      default:
+        setAccountTypeFilter("all")
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -24,7 +53,7 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs defaultValue="all" className="space-y-4" onValueChange={handleTabChange}>
         <div className="flex justify-between items-center">
           <TabsList>
             <TabsTrigger value="all">All Users</TabsTrigger>
@@ -36,9 +65,17 @@ export default function UsersPage() {
           <div className="flex gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input placeholder="Search users..." className="pl-10 w-[250px]" />
+              <Input 
+                placeholder="Search users..." 
+                className="pl-10 w-[250px]" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-            <Select defaultValue="all">
+            <Select 
+              value={statusFilter} 
+              onValueChange={setStatusFilter}
+            >
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -53,16 +90,39 @@ export default function UsersPage() {
         </div>
 
         <TabsContent value="all">
-          <UserManagementTable addUserOpen={addUserOpen} setAddUserOpen={setAddUserOpen} />
+          <UserManagementTable 
+            addUserOpen={addUserOpen} 
+            setAddUserOpen={setAddUserOpen} 
+            searchQuery={debouncedSearchQuery}
+            statusFilter={statusFilter !== "all" ? statusFilter : undefined}
+          />
         </TabsContent>
         <TabsContent value="sb">
-          <UserManagementTable filterType="SB" addUserOpen={addUserOpen} setAddUserOpen={setAddUserOpen} />
+          <UserManagementTable 
+            filterType="SB" 
+            addUserOpen={addUserOpen} 
+            setAddUserOpen={setAddUserOpen} 
+            searchQuery={debouncedSearchQuery}
+            statusFilter={statusFilter !== "all" ? statusFilter : undefined}
+          />
         </TabsContent>
         <TabsContent value="bb">
-          <UserManagementTable filterType="BB" addUserOpen={addUserOpen} setAddUserOpen={setAddUserOpen} />
+          <UserManagementTable 
+            filterType="BB" 
+            addUserOpen={addUserOpen} 
+            setAddUserOpen={setAddUserOpen} 
+            searchQuery={debouncedSearchQuery}
+            statusFilter={statusFilter !== "all" ? statusFilter : undefined}
+          />
         </TabsContent>
         <TabsContent value="mb">
-          <UserManagementTable filterType="MB" addUserOpen={addUserOpen} setAddUserOpen={setAddUserOpen} />
+          <UserManagementTable 
+            filterType="MB" 
+            addUserOpen={addUserOpen} 
+            setAddUserOpen={setAddUserOpen} 
+            searchQuery={debouncedSearchQuery}
+            statusFilter={statusFilter !== "all" ? statusFilter : undefined}
+          />
         </TabsContent>
       </Tabs>
     </div>

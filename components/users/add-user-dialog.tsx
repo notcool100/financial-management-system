@@ -13,23 +13,36 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertCircle } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
+interface User {
+  id: string
+  name: string
+  email: string
+  phone: string
+  account_type: string
+  balance: number
+  status: "active" | "pending" | "inactive"
+  created_at: string
+}
 
 interface AddUserDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onUserAdded: (user: any) => void
+  onUserAdded: (user: User) => void
 }
 
 export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
     phone: "",
-    accountType: "SB",
-    balance: 0,
+    account_type: "SB",
+    initial_balance: 0,
     status: "active",
   })
   const [avatarPreview, setAvatarPreview] = useState("")
@@ -43,19 +56,27 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true)
+    setError(null)
 
-    // Simulate API call
-    setTimeout(() => {
-      const user = {
-        ...newUser,
-        id: `${Date.now()}`, // Generate a unique ID
-        dateCreated: new Date().toISOString().split("T")[0], // Today's date in YYYY-MM-DD format
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(newUser)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to create user')
       }
-
-      onUserAdded(user)
-      setIsSubmitting(false)
+      
+      const data = await response.json()
+      onUserAdded(data.user)
       onOpenChange(false)
 
       // Reset form
@@ -63,12 +84,17 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         name: "",
         email: "",
         phone: "",
-        accountType: "SB",
-        balance: 0,
+        account_type: "SB",
+        initial_balance: 0,
         status: "active",
       })
       setAvatarPreview("")
-    }, 1000)
+    } catch (err: any) {
+      console.error('Error creating user:', err)
+      setError(err.message || 'Failed to create user')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -78,6 +104,14 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>Fill in the details to create a new user account.</DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-6 py-4">
           <div className="flex items-center gap-4">
@@ -124,9 +158,9 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="accountType">Account Type</Label>
-              <Select value={newUser.accountType} onValueChange={(value) => handleInputChange("accountType", value)}>
-                <SelectTrigger id="accountType">
+              <Label htmlFor="account_type">Account Type</Label>
+              <Select value={newUser.account_type} onValueChange={(value) => handleInputChange("account_type", value)}>
+                <SelectTrigger id="account_type">
                   <SelectValue placeholder="Select account type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -137,18 +171,23 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="balance">Initial Balance</Label>
+              <Label htmlFor="initial_balance">Initial Balance</Label>
               <Input
-                id="balance"
+                id="initial_balance"
                 type="number"
                 placeholder="0"
-                value={newUser.balance}
-                onChange={(e) => handleInputChange("balance", Number(e.target.value))}
+                value={newUser.initial_balance}
+                onChange={(e) => handleInputChange("initial_balance", Number(e.target.value))}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={newUser.status} onValueChange={(value) => handleInputChange("status", value)}>
+              <Select 
+                value={newUser.status} 
+                onValueChange={(value: "active" | "pending" | "inactive") => 
+                  handleInputChange("status", value)
+                }
+              >
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -163,10 +202,14 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || !newUser.name || !newUser.email || !newUser.phone} 
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
