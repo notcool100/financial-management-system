@@ -69,6 +69,8 @@ app.use('/api/sms', smsRoutes);
 app.use('/api/tax', taxRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/interest', interestRoutes);
+const staffRoutes = require('./routes/staff.routes');
+app.use('/api', staffRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

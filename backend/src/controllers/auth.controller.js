@@ -1,4 +1,5 @@
-const bcrypt = require('bcrypt');
+// Using mock bcrypt implementation for development
+const bcrypt = require('../utils/mock-bcrypt');
 const { db } = require('../config/db.config');
 const { generateToken, generateRefreshToken } = require('../utils/jwt.utils');
 const logger = require('../config/logger.config');

@@ -99,31 +99,30 @@ export function AddStaffDialog({ open, onOpenChange }: AddStaffDialogProps) {
     }
     
     try {
-      // In a real application, you would call your API to create the staff member
-      // const response = await fetch('/api/staff', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     name: formData.name,
-      //     email: formData.email,
-      //     phone: formData.phone,
-      //     role: formData.role,
-      //     password: formData.password,
-      //   })
-      // })
-      
-      // For now, we'll simulate a successful response
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      setSuccess(true)
+      const response = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          passwordHash: formData.password,
+          status: 'active'
+        })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create staff member');
+      }
+      setSuccess(true);
       setTimeout(() => {
-        handleOpenChange(false)
-      }, 2000)
+        handleOpenChange(false);
+      }, 2000);
     } catch (err: any) {
-      console.error("Error creating staff:", err)
-      setError(err.message || "Failed to create staff member")
+      console.error("Error creating staff:", err);
+      setError(err.message || "Failed to create staff member");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
   

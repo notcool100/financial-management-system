@@ -186,38 +186,24 @@ export function StaffManagementTable({ roleFilter = "" }: StaffManagementTablePr
       setError(null)
       
       try {
-        // In a real application, you would fetch from your API
-        // const response = await fetch('/api/staff?page=${page}&status=${statusFilter}&search=${searchQuery}&role=${roleFilter}')
-        
-        // For now, we'll use mock data
-        setTimeout(() => {
-          let filteredStaff = [...mockStaff]
-          
-          if (roleFilter) {
-            filteredStaff = filteredStaff.filter(s => s.role === roleFilter)
-          }
-          
-          if (statusFilter) {
-            filteredStaff = filteredStaff.filter(s => s.status === statusFilter)
-          }
-          
-          if (searchQuery) {
-            const query = searchQuery.toLowerCase()
-            filteredStaff = filteredStaff.filter(s => 
-              s.name.toLowerCase().includes(query) || 
-              s.email.toLowerCase().includes(query) ||
-              s.phone.includes(query)
-            )
-          }
-          
-          setStaff(filteredStaff)
-          setTotalPages(Math.ceil(filteredStaff.length / 10))
-          setLoading(false)
-        }, 1000)
+        const params = new URLSearchParams();
+        if (page) params.append('page', page.toString());
+        if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+        if (searchQuery) params.append('search', searchQuery);
+        if (roleFilter) params.append('role', roleFilter);
+
+        const response = await fetch(`/api/staff?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch staff data');
+        }
+        const data = await response.json();
+        setStaff(data);
+        setTotalPages(1); // Adjust if backend supports pagination
+        setLoading(false);
       } catch (err: any) {
-        console.error("Error fetching staff:", err)
-        setError("Failed to load staff data. Please try again.")
-        setLoading(false)
+        console.error("Error fetching staff:", err);
+        setError("Failed to load staff data. Please try again.");
+        setLoading(false);
       }
     }
     
@@ -272,58 +258,80 @@ export function StaffManagementTable({ roleFilter = "" }: StaffManagementTablePr
 
   // Handle save edit
   const handleSaveEdit = async () => {
-    // In a real application, you would call your API to update the staff member
-    // await fetch(`/api/staff/${selectedStaff.id}`, {
-    //   method: 'PUT',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(editFormData)
-    // })
-    
-    // For now, we'll update the mock data
-    const updatedStaff = staff.map(s => 
-      s.id === selectedStaff.id ? { ...s, ...editFormData } : s
-    )
-    setStaff(updatedStaff)
-    setIsEditDialogOpen(false)
+    try {
+      const response = await fetch(`/api/staff/${selectedStaff.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData)
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update staff');
+      }
+      const updatedStaffData = await response.json();
+      const updatedStaff = staff.map(s => 
+        s.id === selectedStaff.id ? updatedStaffData : s
+      );
+      setStaff(updatedStaff);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating staff:', error);
+      setError('Failed to update staff. Please try again.');
+    }
   }
 
   // Handle confirm delete
   const handleConfirmDelete = async () => {
-    // In a real application, you would call your API to delete the staff member
-    // await fetch(`/api/staff/${selectedStaff.id}`, {
-    //   method: 'DELETE'
-    // })
-    
-    // For now, we'll update the mock data
-    const updatedStaff = staff.filter(s => s.id !== selectedStaff.id)
-    setStaff(updatedStaff)
-    setIsDeleteDialogOpen(false)
+    try {
+      const response = await fetch(`/api/staff/${selectedStaff.id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete staff');
+      }
+      const updatedStaff = staff.filter(s => s.id !== selectedStaff.id);
+      setStaff(updatedStaff);
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting staff:', error);
+      setError('Failed to delete staff. Please try again.');
+    }
   }
 
   // Handle save permissions
   const handleSavePermissions = async () => {
-    // In a real application, you would call your API to update permissions
-    // await fetch(`/api/staff/${selectedStaff.id}/permissions`, {
-    //   method: 'PUT',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ permissions: selectedPermissions })
-    // })
-    
-    // For now, we'll just close the dialog
-    setIsPermissionsDialogOpen(false)
+    try {
+      // Assuming permissions are part of staff update
+      const response = await fetch(`/api/staff/${selectedStaff.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissions: selectedPermissions })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update permissions');
+      }
+      setIsPermissionsDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      setError('Failed to update permissions. Please try again.');
+    }
   }
 
   // Handle reset password
   const handleResetPassword = async () => {
-    // In a real application, you would call your API to reset the password
-    // await fetch(`/api/staff/${selectedStaff.id}/reset-password`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ password: resetPasswordData.password })
-    // })
-    
-    // For now, we'll just close the dialog
-    setIsResetPasswordDialogOpen(false)
+    try {
+      const response = await fetch(`/api/staff/${selectedStaff.id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: resetPasswordData.password })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to reset password');
+      }
+      setIsResetPasswordDialogOpen(false);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      setError('Failed to reset password. Please try again.');
+    }
   }
 
   // Format date
@@ -355,7 +363,7 @@ export function StaffManagementTable({ roleFilter = "" }: StaffManagementTablePr
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
@@ -434,7 +442,7 @@ export function StaffManagementTable({ roleFilter = "" }: StaffManagementTablePr
                     </td>
                     <td className="py-3 px-4">
                       <Badge
-                        variant={staff.status === "active" ? "success" : "destructive"}
+                        variant={staff.status === "active" ? "default" : "destructive"}
                       >
                         {staff.status === "active" ? "Active" : "Inactive"}
                       </Badge>
