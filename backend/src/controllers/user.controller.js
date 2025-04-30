@@ -1,4 +1,14 @@
-const bcrypt = require('bcrypt');
+let bcrypt;
+try {
+  bcrypt = require('bcrypt');
+} catch (err) {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('bcrypt module not found, falling back to mock-bcrypt for development');
+    bcrypt = require('../utils/mock-bcrypt');
+  } else {
+    throw err;
+  }
+}
 const { db } = require('../config/db.config');
 const logger = require('../config/logger.config');
 const { ApiError } = require('../middleware/error.middleware');
