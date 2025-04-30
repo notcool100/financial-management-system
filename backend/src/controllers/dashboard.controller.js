@@ -130,6 +130,61 @@ const getDashboardChart = async (req, res, next) => {
   }
 };
 
+const getDashboardStats = async (req, res, next) => {
+  try {
+    // Get current month and year
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    // Get active loans count
+    const activeLoansCount = await db.one(`
+      SELECT COUNT(*) as count
+      FROM loans
+      WHERE status = 'active'
+    `);
+
+    // Get total outstanding amount
+    const outstandingAmount = await db.one(`
+      SELECT COALESCE(SUM(remaining_amount), 0) as total
+      FROM loans
+      WHERE status = 'active'
+    `);
+
+    // Get total disbursed amount this month
+    const disbursedThisMonth = await db.one(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM loans
+      WHERE 
+        EXTRACT(MONTH FROM disburse_date) = $1 
+        AND EXTRACT(YEAR FROM disburse_date) = $2
+        AND status != 'pending'
+    `, [currentMonth, currentYear]);
+
+    // Get total repaid amount this month
+    const repaidThisMonth = await db.one(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM loan_transactions
+      WHERE 
+        EXTRACT(MONTH FROM payment_date) = $1 
+        AND EXTRACT(YEAR FROM payment_date) = $2
+    `, [currentMonth, currentYear]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        activeLoans: parseInt(activeLoansCount.count),
+        outstandingAmount: parseFloat(outstandingAmount.total),
+        disbursedThisMonth: parseFloat(disbursedThisMonth.total),
+        repaidThisMonth: parseFloat(repaidThisMonth.total),
+      },
+    });
+  } catch (error) {
+    logger.error('Error getting dashboard stats data:', error);
+    next(error);
+  }
+};
+
 /**
  * Get recent users
  * @route GET /api/users/recent
@@ -159,4 +214,5 @@ const getRecentUsers = async (req, res, next) => {
 module.exports = {
   getDashboardChart,
   getRecentUsers,
+  getDashboardStats,
 };

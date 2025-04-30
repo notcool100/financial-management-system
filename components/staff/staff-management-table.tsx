@@ -336,13 +336,16 @@ export function StaffManagementTable({ roleFilter = "" }: StaffManagementTablePr
 
   // Format date
   const formatDate = (dateString: string) => {
+    if (!dateString) return "Invalid date"
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return "Invalid date"
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: false
     }).format(date)
   }
 

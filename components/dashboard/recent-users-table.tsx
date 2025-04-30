@@ -26,6 +26,7 @@ interface User {
 }
 
 export function RecentUsersTable() {
+  // Initialize with empty array to prevent undefined errors
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +96,13 @@ export function RecentUsersTable() {
         }
         
         const data = await response.json()
-        setUsers(data.users)
+        // Make sure data.users exists and is an array before setting state
+        if (data && Array.isArray(data.users)) {
+          setUsers(data.users)
+        } else {
+          console.error('API returned invalid data format', data)
+          throw new Error('Invalid data format received from API')
+        }
       } catch (err: any) {
         console.error('Error fetching recent users:', err)
         
@@ -155,7 +162,7 @@ export function RecentUsersTable() {
   }, [])
 
   // Only show error if we have an error message and no users (fallback didn't work)
-  if (error && users.length === 0) {
+  if (error && (!users || users.length === 0)) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
@@ -211,7 +218,7 @@ export function RecentUsersTable() {
                 <td className="py-3 px-4 text-right"><Skeleton className="h-8 w-8 rounded-full ml-auto" /></td>
               </tr>
             ))
-          ) : users.length === 0 ? (
+          ) : !users || users.length === 0 ? (
             <tr>
               <td colSpan={5} className="py-6 text-center text-slate-500 dark:text-slate-400">
                 No recent users found
