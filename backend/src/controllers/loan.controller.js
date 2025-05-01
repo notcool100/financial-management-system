@@ -4,6 +4,57 @@ const { ApiError } = require('../middleware/error.middleware');
 const { calculateFlatLoan, calculateDiminishingLoan, generateEmiSchedule } = require('../utils/loan.utils');
 
 /**
+ * Get loan summary statistics
+ * @route GET /api/loans/summary
+ * @access Private (Admin/Staff)
+ */
+const getLoanSummary = async (req, res, next) => {
+  try {
+    // Get summary for flat loans
+    const flatSummary = await db.oneOrNone(`
+      SELECT 
+        COUNT(*) as active_count,
+        COALESCE(SUM(amount), 0) as total_amount,
+        COALESCE(AVG(interest_rate), 0) as avg_interest_rate
+      FROM loans
+      WHERE calculation_type = 'flat' AND status = 'active'
+    `);
+    
+    // Get summary for diminishing loans
+    const diminishingSummary = await db.oneOrNone(`
+      SELECT 
+        COUNT(*) as active_count,
+        COALESCE(SUM(amount), 0) as total_amount,
+        COALESCE(AVG(interest_rate), 0) as avg_interest_rate
+      FROM loans
+      WHERE calculation_type = 'diminishing' AND status = 'active'
+    `);
+    
+    // Format the response
+    const summary = {
+      flat: {
+        active_count: parseInt(flatSummary.active_count) || 0,
+        total_amount: parseFloat(flatSummary.total_amount) || 0,
+        avg_interest_rate: parseFloat(flatSummary.avg_interest_rate) || 0
+      },
+      diminishing: {
+        active_count: parseInt(diminishingSummary.active_count) || 0,
+        total_amount: parseFloat(diminishingSummary.total_amount) || 0,
+        avg_interest_rate: parseFloat(diminishingSummary.avg_interest_rate) || 0
+      }
+    };
+    
+    res.status(200).json({
+      success: true,
+      summary
+    });
+  } catch (error) {
+    logger.error('Error fetching loan summary:', error);
+    next(error);
+  }
+};
+
+/**
  * Get all loans
  * @route GET /api/loans
  * @access Private (Admin/Staff)
@@ -555,4 +606,5 @@ module.exports = {
   recordLoanPayment,
   calculateLoan,
   getLoanTypes,
+  getLoanSummary
 };

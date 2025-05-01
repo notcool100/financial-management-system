@@ -35,45 +35,58 @@ export default function LoansPage() {
       setLoading(true);
       setError(null);
       
-      // Mock data for development
-      const mockSummary = {
-        flat: {
-          active_count: 3,
-          total_amount: 1350000,
-          avg_interest_rate: 13.0
-        },
-        diminishing: {
-          active_count: 2,
-          total_amount: 5500000,
-          avg_interest_rate: 9.75
-        }
-      };
-      
       try {
+        // Add the Authorization header to the request
+        const token = localStorage.getItem('token');
         const response = await fetch('/api/loans/summary', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
-        if (!response.ok) {
-          // If API endpoint is not available, use mock data
-          console.warn('API endpoint not available, using mock loan summary data');
-          setSummary(mockSummary);
-          return;
-        }
-        
         const data = await response.json();
-        setSummary(data.summary);
+        
+        if (data.success && data.summary) {
+          setSummary(data.summary);
+        } else {
+          console.warn('No loan summary data available:', data.message);
+          
+          // Create empty summary data instead of showing an error
+          setSummary({
+            flat: {
+              active_count: 0,
+              total_amount: 0,
+              avg_interest_rate: 0
+            },
+            diminishing: {
+              active_count: 0,
+              total_amount: 0,
+              avg_interest_rate: 0
+            }
+          });
+          
+          // Only set error if there's a specific message
+          if (data.message && data.message !== 'No loan summary data available') {
+            setError(data.message);
+          }
+        }
       } catch (err: any) {
         console.error('Error fetching loan summary:', err);
+        setError('Failed to load loan summary data. Please try again later.');
         
-        // Use mock data instead of showing error
-        console.warn('Using mock loan summary data due to error');
-        setSummary(mockSummary);
-        
-        // Only log error to console, don't show to user
-        // setError('Failed to load loan summary');
+        // Create empty summary data
+        setSummary({
+          flat: {
+            active_count: 0,
+            total_amount: 0,
+            avg_interest_rate: 0
+          },
+          diminishing: {
+            active_count: 0,
+            total_amount: 0,
+            avg_interest_rate: 0
+          }
+        });
       } finally {
         setLoading(false);
       }
@@ -95,7 +108,7 @@ export default function LoansPage() {
         </Button>
       </div>
 
-      {error && !summary && (
+      {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -147,6 +160,31 @@ export default function LoansPage() {
                     <Skeleton className="h-4 w-20" />
                     <Skeleton className="h-6 w-12" />
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : error ? (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Flat Rate Loans</CardTitle>
+                <CardDescription>Fixed interest rate throughout the loan term</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center h-24 text-slate-500">
+                  No data available
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Diminishing Rate Loans</CardTitle>
+                <CardDescription>Interest calculated on outstanding principal</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center h-24 text-slate-500">
+                  No data available
                 </div>
               </CardContent>
             </Card>

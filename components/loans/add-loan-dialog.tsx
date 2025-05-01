@@ -90,101 +90,150 @@ export function AddLoanDialog({ open, onOpenChange, onLoanAdded }: AddLoanDialog
 
   const fetchClients = async () => {
     setLoading(true);
-    
-    // Mock data for development
-    const mockClients: Client[] = [
-      { id: "1", name: "Ram Sharma", account_number: "SB-1001" },
-      { id: "2", name: "Sita Poudel", account_number: "SB-1002" },
-      { id: "3", name: "Hari Thapa", account_number: "BB-1003" },
-      { id: "4", name: "Gita KC", account_number: "MB-1004" },
-      { id: "5", name: "Binod Adhikari", account_number: "SB-1005" }
-    ];
+    setError(null);
     
     try {
+      // Add the Authorization header to the request
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/clients', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
-      if (!response.ok) {
-        // If API endpoint is not available, use mock data
-        console.warn('API endpoint not available, using mock client data');
-        setClients(mockClients);
-        return;
-      }
-      
       const data = await response.json();
-      setClients(data.clients);
+      
+      if (data.success) {
+        // Even if there are no clients, we still set the empty array
+        setClients(data.clients || []);
+        
+        // Only show error if there are truly no clients
+        if (!data.clients || data.clients.length === 0) {
+          if (process.env.NODE_ENV === 'development') {
+            // Create mock clients in development mode
+            const mockClients = [
+              { id: "1", name: "Ram Sharma", account_number: "SB-1001" },
+              { id: "2", name: "Sita Poudel", account_number: "SB-1002" }
+            ];
+            setClients(mockClients);
+          } else {
+            setError('No clients found. Please add clients before creating a loan.');
+          }
+        }
+      } else {
+        console.warn('No clients data available:', data.message);
+        
+        if (process.env.NODE_ENV === 'development') {
+          // Create mock clients in development mode
+          const mockClients = [
+            { id: "1", name: "Ram Sharma", account_number: "SB-1001" },
+            { id: "2", name: "Sita Poudel", account_number: "SB-1002" }
+          ];
+          setClients(mockClients);
+        } else {
+          setClients([]);
+          
+          // Only set error if there's a specific message
+          if (data.message) {
+            setError(data.message);
+          } else {
+            setError('No clients found. Please add clients before creating a loan.');
+          }
+        }
+      }
     } catch (err: any) {
       console.error('Error fetching clients:', err);
       
-      // Use mock data instead of showing error
-      console.warn('Using mock client data due to error');
-      setClients(mockClients);
-      
-      // Only log error to console, don't show to user
-      // setError('Failed to load clients: ' + err.message);
+      if (process.env.NODE_ENV === 'development') {
+        // Create mock clients in development mode
+        const mockClients = [
+          { id: "1", name: "Ram Sharma", account_number: "SB-1001" },
+          { id: "2", name: "Sita Poudel", account_number: "SB-1002" }
+        ];
+        setClients(mockClients);
+      } else {
+        setError('Failed to load clients. Please try again later.');
+        setClients([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchLoanTypes = async () => {
-    // Mock data for development
-    const mockLoanTypes: LoanType[] = [
-      {
-        id: "1",
-        name: "Personal Loan",
-        interest_rate: 12.5,
-        min_amount: 50000,
-        max_amount: 1000000,
-        min_tenure_months: 12,
-        max_tenure_months: 60,
-        processing_fee_percent: 1.5
-      },
-      {
-        id: "2",
-        name: "Home Loan",
-        interest_rate: 10.0,
-        min_amount: 500000,
-        max_amount: 10000000,
-        min_tenure_months: 60,
-        max_tenure_months: 240,
-        processing_fee_percent: 1.0
-      },
-      {
-        id: "3",
-        name: "Business Loan",
-        interest_rate: 14.0,
-        min_amount: 200000,
-        max_amount: 5000000,
-        min_tenure_months: 24,
-        max_tenure_months: 84,
-        processing_fee_percent: 2.0
-      },
-      {
-        id: "4",
-        name: "Education Loan",
-        interest_rate: 9.5,
-        min_amount: 100000,
-        max_amount: 2000000,
-        min_tenure_months: 12,
-        max_tenure_months: 120,
-        processing_fee_percent: 0.5
-      }
-    ];
-    
     try {
+      // Add the Authorization header to the request
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/loans/types', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
-      if (!response.ok) {
-        // If API endpoint is not available, use mock data
-        console.warn('API endpoint not available, using mock loan types data');
+      const data = await response.json();
+      
+      if (data.success && data.loanTypes && data.loanTypes.length > 0) {
+        setLoanTypes(data.loanTypes);
+        
+        // Set default loan type
+        const defaultLoanType = data.loanTypes[0];
+        setNewLoan(prev => ({
+          ...prev,
+          loan_type_id: defaultLoanType.id,
+          interest_rate: defaultLoanType.interest_rate,
+          processing_fee: defaultLoanType.processing_fee_percent * prev.amount / 100
+        }));
+      } else {
+        console.warn('No loan types data available:', data.message);
+        setLoanTypes([]);
+        
+        // Create a default loan type if none exists
+        if (process.env.NODE_ENV === 'development') {
+          const mockLoanTypes = [
+            {
+              id: "1",
+              name: "Personal Loan",
+              interest_rate: 12.5,
+              min_amount: 50000,
+              max_amount: 1000000,
+              min_tenure_months: 12,
+              max_tenure_months: 60,
+              processing_fee_percent: 1.5
+            }
+          ];
+          
+          setLoanTypes(mockLoanTypes);
+          
+          // Set default loan type
+          const defaultLoanType = mockLoanTypes[0];
+          setNewLoan(prev => ({
+            ...prev,
+            loan_type_id: defaultLoanType.id,
+            interest_rate: defaultLoanType.interest_rate,
+            processing_fee: defaultLoanType.processing_fee_percent * prev.amount / 100
+          }));
+        } else {
+          setError('No loan types found. Please add loan types before creating a loan.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Error fetching loan types:', err);
+      
+      if (process.env.NODE_ENV === 'development') {
+        // Create mock loan types in development mode
+        const mockLoanTypes = [
+          {
+            id: "1",
+            name: "Personal Loan",
+            interest_rate: 12.5,
+            min_amount: 50000,
+            max_amount: 1000000,
+            min_tenure_months: 12,
+            max_tenure_months: 60,
+            processing_fee_percent: 1.5
+          }
+        ];
+        
         setLoanTypes(mockLoanTypes);
         
         // Set default loan type
@@ -195,80 +244,22 @@ export function AddLoanDialog({ open, onOpenChange, onLoanAdded }: AddLoanDialog
           interest_rate: defaultLoanType.interest_rate,
           processing_fee: defaultLoanType.processing_fee_percent * prev.amount / 100
         }));
-        return;
+      } else {
+        setError('Failed to load loan types. Please try again later.');
+        setLoanTypes([]);
       }
-      
-      const data = await response.json();
-      setLoanTypes(data.loanTypes);
-      
-      // Set default loan type if available
-      if (data.loanTypes.length > 0) {
-        const defaultLoanType = data.loanTypes[0];
-        setNewLoan(prev => ({
-          ...prev,
-          loan_type_id: defaultLoanType.id,
-          interest_rate: defaultLoanType.interest_rate,
-          processing_fee: defaultLoanType.processing_fee_percent * prev.amount / 100
-        }));
-      }
-    } catch (err: any) {
-      console.error('Error fetching loan types:', err);
-      
-      // Use mock data instead of showing error
-      console.warn('Using mock loan types data due to error');
-      setLoanTypes(mockLoanTypes);
-      
-      // Set default loan type
-      const defaultLoanType = mockLoanTypes[0];
-      setNewLoan(prev => ({
-        ...prev,
-        loan_type_id: defaultLoanType.id,
-        interest_rate: defaultLoanType.interest_rate,
-        processing_fee: defaultLoanType.processing_fee_percent * prev.amount / 100
-      }));
-      
-      // Only log error to console, don't show to user
-      // setError('Failed to load loan types: ' + err.message);
     }
   };
 
   const calculateLoan = async () => {
     try {
-      // Calculate mock data for development
-      const mockCalculation = (amount: number, interestRate: number, tenureMonths: number, calculationType: string): LoanCalculation => {
-        const principal = amount;
-        const monthlyInterestRate = interestRate / 100 / 12;
-        let emiAmount = 0;
-        let totalInterest = 0;
-        
-        if (calculationType === 'flat') {
-          // Flat interest calculation
-          totalInterest = principal * (interestRate / 100) * (tenureMonths / 12);
-          emiAmount = (principal + totalInterest) / tenureMonths;
-        } else {
-          // Diminishing interest calculation (EMI formula)
-          emiAmount = principal * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, tenureMonths) / 
-                     (Math.pow(1 + monthlyInterestRate, tenureMonths) - 1);
-          totalInterest = (emiAmount * tenureMonths) - principal;
-        }
-        
-        // Find the selected loan type to get processing fee
-        const selectedLoanType = loanTypes.find(lt => lt.id === newLoan.loan_type_id);
-        const processingFeePercent = selectedLoanType?.processing_fee_percent || 1;
-        const processingFee = principal * (processingFeePercent / 100);
-        
-        return {
-          emi_amount: Math.round(emiAmount),
-          total_interest: Math.round(totalInterest),
-          total_amount: Math.round(principal + totalInterest),
-          processing_fee: Math.round(processingFee)
-        };
-      };
-      
+      // Add the Authorization header to the request
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/loans/calculate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           amount: newLoan.amount,
@@ -278,61 +269,56 @@ export function AddLoanDialog({ open, onOpenChange, onLoanAdded }: AddLoanDialog
         })
       });
       
-      if (!response.ok) {
-        // If API endpoint is not available, use mock calculation
-        console.warn('API endpoint not available, using mock calculation');
-        
-        const mockResult = mockCalculation(
-          Number(newLoan.amount), 
-          Number(newLoan.interest_rate), 
-          Number(newLoan.tenure_months), 
-          newLoan.calculation_type
-        );
-        
-        setCalculation(mockResult);
-        return;
-      }
-      
       const data = await response.json();
-      setCalculation(data.calculation);
+      
+      if (data.success && data.calculation) {
+        setCalculation(data.calculation);
+      } else {
+        console.warn('Error calculating loan:', data.message);
+        
+        // Fallback to client-side calculation if API fails
+        calculateClientSide();
+      }
     } catch (err: any) {
       console.error('Error calculating loan:', err);
       
-      // Use mock calculation even on error
-      console.warn('Using mock calculation due to error');
-      
-      // Calculate mock data
-      const principal = Number(newLoan.amount);
-      const interestRate = Number(newLoan.interest_rate);
-      const tenureMonths = Number(newLoan.tenure_months);
-      const calculationType = newLoan.calculation_type;
-      const monthlyInterestRate = interestRate / 100 / 12;
-      let emiAmount = 0;
-      let totalInterest = 0;
-      
-      if (calculationType === 'flat') {
-        // Flat interest calculation
-        totalInterest = principal * (interestRate / 100) * (tenureMonths / 12);
-        emiAmount = (principal + totalInterest) / tenureMonths;
-      } else {
-        // Diminishing interest calculation (EMI formula)
-        emiAmount = principal * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, tenureMonths) / 
-                   (Math.pow(1 + monthlyInterestRate, tenureMonths) - 1);
-        totalInterest = (emiAmount * tenureMonths) - principal;
-      }
-      
-      // Find the selected loan type to get processing fee
-      const selectedLoanType = loanTypes.find(lt => lt.id === newLoan.loan_type_id);
-      const processingFeePercent = selectedLoanType?.processing_fee_percent || 1;
-      const processingFee = principal * (processingFeePercent / 100);
-      
-      setCalculation({
-        emi_amount: Math.round(emiAmount),
-        total_interest: Math.round(totalInterest),
-        total_amount: Math.round(principal + totalInterest),
-        processing_fee: Math.round(processingFee)
-      });
+      // Fallback to client-side calculation if API fails
+      calculateClientSide();
     }
+  };
+  
+  // Client-side loan calculation as fallback
+  const calculateClientSide = () => {
+    const principal = Number(newLoan.amount);
+    const interestRate = Number(newLoan.interest_rate);
+    const tenureMonths = Number(newLoan.tenure_months);
+    const calculationType = newLoan.calculation_type;
+    const monthlyInterestRate = interestRate / 100 / 12;
+    let emiAmount = 0;
+    let totalInterest = 0;
+    
+    if (calculationType === 'flat') {
+      // Flat interest calculation
+      totalInterest = principal * (interestRate / 100) * (tenureMonths / 12);
+      emiAmount = (principal + totalInterest) / tenureMonths;
+    } else {
+      // Diminishing interest calculation (EMI formula)
+      emiAmount = principal * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, tenureMonths) / 
+                 (Math.pow(1 + monthlyInterestRate, tenureMonths) - 1);
+      totalInterest = (emiAmount * tenureMonths) - principal;
+    }
+    
+    // Find the selected loan type to get processing fee
+    const selectedLoanType = loanTypes.find(lt => lt.id === newLoan.loan_type_id);
+    const processingFeePercent = selectedLoanType?.processing_fee_percent || 1;
+    const processingFee = principal * (processingFeePercent / 100);
+    
+    setCalculation({
+      emi_amount: Math.round(emiAmount),
+      total_interest: Math.round(totalInterest),
+      total_amount: Math.round(principal + totalInterest),
+      processing_fee: Math.round(processingFee)
+    });
   };
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -371,104 +357,52 @@ export function AddLoanDialog({ open, onOpenChange, onLoanAdded }: AddLoanDialog
     setError(null);
     
     try {
+      // Add the Authorization header to the request
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/loans', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(newLoan)
       });
       
-      if (!response.ok) {
-        // If API endpoint is not available, simulate successful creation
-        console.warn('API endpoint not available, simulating successful loan creation');
-        
-        // Create a mock loan response
-        const mockLoan = {
-          id: Math.random().toString(36).substring(2, 15),
-          ...newLoan,
-          status: "active",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        // Call the onLoanAdded callback with the mock loan
-        onLoanAdded(mockLoan);
-        setIsSubmitting(false);
-        onOpenChange(false);
-        
-        // Reset form
-        setNewLoan({
-          client_id: "",
-          loan_type_id: "",
-          calculation_type: "flat",
-          amount: 100000,
-          interest_rate: 13.5,
-          tenure_months: 12,
-          disburse_date: new Date().toISOString().split("T")[0],
-          processing_fee: 0,
-        });
-        setCalculationType("flat");
-        setCalculation(null);
-        return;
-      }
-      
       const data = await response.json();
-      onLoanAdded(data.loan);
-      setIsSubmitting(false);
-      onOpenChange(false);
-
-      // Reset form
-      setNewLoan({
-        client_id: "",
-        loan_type_id: "",
-        calculation_type: "flat",
-        amount: 100000,
-        interest_rate: 13.5,
-        tenure_months: 12,
-        disburse_date: new Date().toISOString().split("T")[0],
-        processing_fee: 0,
-      });
-      setCalculationType("flat");
-      setCalculation(null);
+      
+      if (data.success && data.loan) {
+        // Success - call the callback and close the dialog
+        onLoanAdded(data.loan);
+        resetForm();
+        onOpenChange(false);
+      } else {
+        // API returned an error
+        console.error('Error creating loan:', data.message);
+        setError(data.message || 'Failed to create loan. Please try again.');
+      }
     } catch (err: any) {
       console.error('Error creating loan:', err);
-      
-      // Simulate successful creation even on error
-      console.warn('Simulating successful loan creation despite error');
-      
-      // Create a mock loan response
-      const mockLoan = {
-        id: Math.random().toString(36).substring(2, 15),
-        ...newLoan,
-        status: "active",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      // Call the onLoanAdded callback with the mock loan
-      onLoanAdded(mockLoan);
+      setError('Failed to create loan. Please check your connection and try again.');
+    } finally {
       setIsSubmitting(false);
-      onOpenChange(false);
-      
-      // Reset form
-      setNewLoan({
-        client_id: "",
-        loan_type_id: "",
-        calculation_type: "flat",
-        amount: 100000,
-        interest_rate: 13.5,
-        tenure_months: 12,
-        disburse_date: new Date().toISOString().split("T")[0],
-        processing_fee: 0,
-      });
-      setCalculationType("flat");
-      setCalculation(null);
-      
-      // Don't show error to user in development
-      // setError(err.message || 'Failed to create loan');
     }
+  }
+  
+  // Reset the form to its initial state
+  const resetForm = () => {
+    setNewLoan({
+      client_id: "",
+      loan_type_id: "",
+      calculation_type: "flat",
+      amount: 100000,
+      interest_rate: 13.5,
+      tenure_months: 12,
+      disburse_date: new Date().toISOString().split("T")[0],
+      processing_fee: 0,
+    });
+    setCalculationType("flat");
+    setCalculation(null);
+    setError(null);
   }
 
   return (

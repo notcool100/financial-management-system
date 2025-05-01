@@ -7,7 +7,8 @@ const {
   updateLoanStatus, 
   recordLoanPayment, 
   calculateLoan,
-  getLoanTypes
+  getLoanTypes,
+  getLoanSummary
 } = require('../controllers/loan.controller');
 const { 
   authenticate, 
@@ -87,6 +88,24 @@ router.get(
   ],
   getLoans
 );
+
+/**
+ * @swagger
+ * /api/loans/summary:
+ *   get:
+ *     summary: Get loan summary statistics
+ *     tags: [Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Loan summary statistics
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized
+ */
+router.get('/summary', authenticate, isStaff, getLoanSummary);
 
 /**
  * @swagger

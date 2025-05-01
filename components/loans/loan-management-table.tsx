@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { AlertCircle, CreditCard, Edit, Eye, MoreHorizontal, TrendingDown } from "lucide-react"
+import { AlertCircle, CreditCard, Edit, Eye, MoreHorizontal, Plus, TrendingDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -63,72 +63,26 @@ export function LoanManagementTable({ loanType, addLoanOpen = false, setAddLoanO
   useEffect(() => {
     // Fetch loan types
     const fetchLoanTypes = async () => {
-      // Mock data for development
-      const mockLoanTypes = [
-        {
-          id: "1",
-          name: "Personal Loan",
-          interest_rate: 12.5,
-          min_amount: 50000,
-          max_amount: 1000000,
-          min_tenure_months: 12,
-          max_tenure_months: 60,
-          processing_fee_percent: 1.5
-        },
-        {
-          id: "2",
-          name: "Home Loan",
-          interest_rate: 10.0,
-          min_amount: 500000,
-          max_amount: 10000000,
-          min_tenure_months: 60,
-          max_tenure_months: 240,
-          processing_fee_percent: 1.0
-        },
-        {
-          id: "3",
-          name: "Business Loan",
-          interest_rate: 14.0,
-          min_amount: 200000,
-          max_amount: 5000000,
-          min_tenure_months: 24,
-          max_tenure_months: 84,
-          processing_fee_percent: 2.0
-        },
-        {
-          id: "4",
-          name: "Education Loan",
-          interest_rate: 9.5,
-          min_amount: 100000,
-          max_amount: 2000000,
-          min_tenure_months: 12,
-          max_tenure_months: 120,
-          processing_fee_percent: 0.5
-        }
-      ];
-      
       try {
+        // Add the Authorization header to the request
+        const token = localStorage.getItem('token');
         const response = await fetch('/api/loans/types', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
-        if (!response.ok) {
-          // If API endpoint is not available, use mock data
-          console.warn('API endpoint not available, using mock loan types data');
-          setLoanTypes(mockLoanTypes);
-          return;
-        }
-        
         const data = await response.json();
-        setLoanTypes(data.loanTypes);
+        
+        if (data.success && data.loanTypes && data.loanTypes.length > 0) {
+          setLoanTypes(data.loanTypes);
+        } else {
+          console.warn('No loan types data available:', data.message);
+          setLoanTypes([]);
+        }
       } catch (err) {
         console.error('Error fetching loan types:', err);
-        
-        // Use mock data instead of showing error
-        console.warn('Using mock loan types data due to error');
-        setLoanTypes(mockLoanTypes);
+        setLoanTypes([]);
       }
     };
 
@@ -137,100 +91,6 @@ export function LoanManagementTable({ loanType, addLoanOpen = false, setAddLoanO
       setLoading(true);
       setError(null);
       
-      // Mock data for development
-      const mockLoans = [
-        {
-          id: "1",
-          client_id: "1",
-          client_name: "Ram Sharma",
-          loan_type_id: "1",
-          loan_type_name: "Personal Loan",
-          calculation_type: "flat",
-          amount: 200000,
-          interest_rate: 12.5,
-          tenure_months: 24,
-          emi_amount: 9375,
-          disburse_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-          next_payment_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-          total_paid: 56250,
-          remaining_amount: 168750,
-          status: "active",
-          created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "2",
-          client_id: "2",
-          client_name: "Sita Poudel",
-          loan_type_id: "2",
-          loan_type_name: "Home Loan",
-          calculation_type: "diminishing",
-          amount: 5000000,
-          interest_rate: 10.0,
-          tenure_months: 180,
-          emi_amount: 53730,
-          disburse_date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-          next_payment_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-          total_paid: 161190,
-          remaining_amount: 4838810,
-          status: "active",
-          created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "3",
-          client_id: "3",
-          client_name: "Hari Thapa",
-          loan_type_id: "3",
-          loan_type_name: "Business Loan",
-          calculation_type: "flat",
-          amount: 1000000,
-          interest_rate: 14.0,
-          tenure_months: 36,
-          emi_amount: 36111,
-          disburse_date: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-          next_payment_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-          total_paid: 432222,
-          remaining_amount: 867778,
-          status: "active",
-          created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "4",
-          client_id: "4",
-          client_name: "Gita KC",
-          loan_type_id: "4",
-          loan_type_name: "Education Loan",
-          calculation_type: "diminishing",
-          amount: 500000,
-          interest_rate: 9.5,
-          tenure_months: 48,
-          emi_amount: 12630,
-          disburse_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          next_payment_date: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
-          total_paid: 12630,
-          remaining_amount: 487370,
-          status: "active",
-          created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "5",
-          client_id: "5",
-          client_name: "Binod Adhikari",
-          loan_type_id: "1",
-          loan_type_name: "Personal Loan",
-          calculation_type: "flat",
-          amount: 150000,
-          interest_rate: 12.5,
-          tenure_months: 12,
-          emi_amount: 14063,
-          disburse_date: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
-          next_payment_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          total_paid: 150000,
-          remaining_amount: 0,
-          status: "completed",
-          created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ];
-      
       try {
         let url = '/api/loans?sort_by=disburse_date&sort_order=desc';
         
@@ -238,46 +98,31 @@ export function LoanManagementTable({ loanType, addLoanOpen = false, setAddLoanO
           url += `&calculation_type=${loanType}`;
         }
         
+        // Add the Authorization header to the request
+        const token = localStorage.getItem('token');
         const response = await fetch(url, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
-        if (!response.ok) {
-          // If API endpoint is not available, use mock data
-          console.warn('API endpoint not available, using mock loans data');
-          
-          // Filter mock data based on loan type if needed
-          let filteredLoans = [...mockLoans];
-          
-          if (loanType) {
-            filteredLoans = filteredLoans.filter(loan => loan.calculation_type === loanType);
-          }
-          
-          setLoans(filteredLoans);
-          return;
-        }
-        
         const data = await response.json();
-        setLoans(data.loans);
+        
+        if (data.success && data.data && data.data.loans) {
+          setLoans(data.data.loans);
+        } else {
+          console.warn('No loan data available:', data.message);
+          setLoans([]);
+          
+          // Only set error if there's a specific message
+          if (data.message && data.message !== 'No loan data available') {
+            setError(data.message);
+          }
+        }
       } catch (err: any) {
         console.error('Error fetching loans:', err);
-        
-        // Use mock data instead of showing error
-        console.warn('Using mock loans data due to error');
-        
-        // Filter mock data based on loan type if needed
-        let filteredLoans = [...mockLoans];
-        
-        if (loanType) {
-          filteredLoans = filteredLoans.filter(loan => loan.calculation_type === loanType);
-        }
-        
-        setLoans(filteredLoans);
-        
-        // Only log error to console, don't show to user
-        // setError(err.message || 'Failed to load loans');
+        setLoans([]);
+        setError('Failed to load loans. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -396,8 +241,20 @@ export function LoanManagementTable({ loanType, addLoanOpen = false, setAddLoanO
                 ))
               ) : loans.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-6 text-center text-slate-500 dark:text-slate-400">
-                    No loans found
+                  <td colSpan={8} className="py-8 px-4 text-center text-slate-500 dark:text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <AlertCircle className="h-8 w-8 text-slate-400" />
+                      <p>No loan data found</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2"
+                        onClick={() => setAddLoanOpen && setAddLoanOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create New Loan
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ) : (

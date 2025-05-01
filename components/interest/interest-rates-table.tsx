@@ -301,12 +301,14 @@ export function InterestRatesTable({ accountType, addRateOpen = false, setAddRat
                   </tr>
                 ))
               ) : rates.length === 0 ? (
-                <tr>
+                // No rates found
+                <tr className="border-t border-slate-200 dark:border-slate-700">
                   <td colSpan={8} className="py-6 text-center text-slate-500 dark:text-slate-400">
                     No interest rates found
                   </td>
                 </tr>
               ) : (
+                // Display rates
                 rates.map((rate) => (
                   <tr
                     key={rate.id}

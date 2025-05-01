@@ -116,6 +116,11 @@ export const roleDescriptions: Record<Role, string> = {
  * @returns Boolean indicating if the user has the permission
  */
 export function hasPermission(userRole: Role, permission: Permission): boolean {
+  // Check if the role exists in rolePermissions before accessing it
+  if (!userRole || !rolePermissions[userRole]) {
+    console.warn(`Role "${userRole}" not found in rolePermissions`);
+    return false;
+  }
   return rolePermissions[userRole].includes(permission);
 }
 
@@ -125,6 +130,11 @@ export function hasPermission(userRole: Role, permission: Permission): boolean {
  * @returns Array of permissions for the role
  */
 export function getPermissionsForRole(role: Role): Permission[] {
+  // Check if the role exists in rolePermissions before accessing it
+  if (!role || !rolePermissions[role]) {
+    console.warn(`Role "${role}" not found in rolePermissions`);
+    return [];
+  }
   return rolePermissions[role];
 }
 

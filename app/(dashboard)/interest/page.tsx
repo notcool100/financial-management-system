@@ -29,7 +29,7 @@ export default function InterestPage() {
   const [summary, setSummary] = useState<InterestRateSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [accountTypeFilter, setAccountTypeFilter] = useState("all")
+  const [accountTypeFilter, setAccountTypeFilter] = useState<"SB" | "BB" | "MB" | undefined>(undefined)
 
   useEffect(() => {
     const fetchInterestSummary = async () => {
@@ -97,7 +97,7 @@ export default function InterestPage() {
         setAccountTypeFilter("MB")
         break
       default:
-        setAccountTypeFilter("all")
+        setAccountTypeFilter(undefined)
     }
   }
 
@@ -184,7 +184,7 @@ export default function InterestPage() {
         </TabsList>
 
         <TabsContent value="all">
-          <InterestRatesTable addRateOpen={addRateOpen} setAddRateOpen={setAddRateOpen} />
+          <InterestRatesTable accountType={accountTypeFilter} addRateOpen={addRateOpen} setAddRateOpen={setAddRateOpen} />
         </TabsContent>
         <TabsContent value="sb">
           <InterestRatesTable accountType="SB" addRateOpen={addRateOpen} setAddRateOpen={setAddRateOpen} />
